@@ -1,8 +1,12 @@
+import os
+import json
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any, List
 from app.services.email_topic_inference import EmailTopicInferenceService
 from app.dataclasses import Email
+
+TOPICS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'topic_keywords.json')
 
 router = APIRouter()
 
@@ -24,6 +28,15 @@ class EmailClassificationResponse(BaseModel):
 class EmailAddResponse(BaseModel):
     message: str
     email_id: int
+
+class TopicRequest(BaseModel):
+    name: str
+    description: str
+
+class TopicResponse(BaseModel):
+    message: str
+    topic: str
+    topics: List[str]
 
 @router.post("/emails/classify", response_model=EmailClassificationResponse)
 async def classify_email(request: EmailRequest):
@@ -52,6 +65,31 @@ async def topics():
 async def pipeline_info():
     inference_service = EmailTopicInferenceService()
     return inference_service.get_pipeline_info()
+
+@router.post("/topics", response_model=TopicResponse, status_code=201)
+async def add_topic(request: TopicRequest):
+    """Add a new topic to the classification system and persist it to disk."""
+    try:
+        with open(TOPICS_FILE, 'r') as f:
+            topics = json.load(f)
+
+        if request.name in topics:
+            raise HTTPException(status_code=409, detail=f"Topic '{request.name}' already exists")
+
+        topics[request.name] = {"description": request.description}
+
+        with open(TOPICS_FILE, 'w') as f:
+            json.dump(topics, f, indent=2)
+
+        return TopicResponse(
+            message=f"Topic '{request.name}' added successfully",
+            topic=request.name,
+            topics=list(topics.keys())
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # TODO: LAB ASSIGNMENT - Part 2 of 2  
 # Create a GET endpoint at "/features" that returns information about all feature generators
