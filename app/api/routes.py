@@ -7,6 +7,7 @@ from app.services.email_topic_inference import EmailTopicInferenceService
 from app.dataclasses import Email
 
 TOPICS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'topic_keywords.json')
+EMAILS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'emails.json')
 
 router = APIRouter()
 
@@ -28,6 +29,11 @@ class EmailClassificationResponse(BaseModel):
 class EmailAddResponse(BaseModel):
     message: str
     email_id: int
+
+class StoreEmailRequest(BaseModel):
+    subject: str
+    body: str
+    ground_truth: str | None = None
 
 class TopicRequest(BaseModel):
     name: str
@@ -60,6 +66,39 @@ async def topics():
     inference_service = EmailTopicInferenceService()
     info = inference_service.get_pipeline_info()
     return {"topics": info["available_topics"]}
+
+@router.post("/emails", response_model=EmailAddResponse, status_code=201)
+async def store_email(request: StoreEmailRequest):
+    """Store an email with an optional ground truth topic label."""
+    try:
+        if request.ground_truth is not None:
+            with open(TOPICS_FILE, 'r') as f:
+                known_topics = json.load(f)
+            if request.ground_truth not in known_topics:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Unknown ground truth topic '{request.ground_truth}'. Valid topics: {list(known_topics.keys())}"
+                )
+
+        with open(EMAILS_FILE, 'r') as f:
+            emails = json.load(f)
+
+        email_id = len(emails) + 1
+        emails.append({
+            "id": email_id,
+            "subject": request.subject,
+            "body": request.body,
+            "ground_truth": request.ground_truth,
+        })
+
+        with open(EMAILS_FILE, 'w') as f:
+            json.dump(emails, f, indent=2)
+
+        return EmailAddResponse(message="Email stored successfully", email_id=email_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/pipeline/info") 
 async def pipeline_info():
