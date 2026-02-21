@@ -1,6 +1,6 @@
 import os
 import json
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 from app.services.email_topic_inference import EmailTopicInferenceService
@@ -45,11 +45,14 @@ class TopicResponse(BaseModel):
     topics: List[str]
 
 @router.post("/emails/classify", response_model=EmailClassificationResponse)
-async def classify_email(request: EmailRequest):
+async def classify_email(
+    request: EmailRequest,
+    mode: str = Query("topic", pattern="^(topic|nearest_email)")
+    ):
     try:
         inference_service = EmailTopicInferenceService()
         email = Email(subject=request.subject, body=request.body)
-        result = inference_service.classify_email(email)
+        result = inference_service.classify_email(email, mode=mode)
         
         return EmailClassificationResponse(
             predicted_topic=result["predicted_topic"],
