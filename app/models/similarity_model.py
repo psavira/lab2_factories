@@ -92,3 +92,55 @@ class EmailClassifierModel:
     def get_all_topics_with_descriptions(self) -> Dict[str, str]:
         """Get all topics with their descriptions"""
         return {topic: self.get_topic_description(topic) for topic in self.topics}
+
+
+class NearestEmailClassifierModel:
+    """Classifies an email by finding the most similar labeled email in the store."""
+
+    _EMAILS_FILE = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'emails.json'
+    )
+
+    def predict(self, features: Dict[str, Any], known_topics: List[str]) -> tuple[str, Dict[str, float]]:
+        labeled = self._load_labeled_emails()
+        if not labeled:
+            raise ValueError(
+                "No labeled emails in store. Store emails with a ground_truth to use nearest-email classification."
+            )
+
+        email_embedding = features.get("email_embeddings_average_embedding")
+        if email_embedding is None:
+            raise ValueError("Missing email embedding feature required for nearest-email classification.")
+
+        query_emb = np.array(email_embedding)
+
+        # Reuse the model instance already cached by the feature generator
+        from app.features.generators import EmailEmbeddingsFeatureGenerator
+        model = EmailEmbeddingsFeatureGenerator._get_model()
+
+        best_score = -1.0
+        best_topic = None
+        topic_scores: Dict[str, float] = {t: 0.0 for t in known_topics}
+
+        for stored in labeled:
+            text = f"{stored['subject']} {stored['body']}"
+            stored_emb = model.encode(text, convert_to_numpy=True)
+
+            norm = np.linalg.norm(query_emb) * np.linalg.norm(stored_emb)
+            similarity = float(np.dot(query_emb, stored_emb) / norm) if norm > 0 else 0.0
+            normalized = (similarity + 1) / 2
+
+            topic = stored["ground_truth"]
+            if topic in topic_scores:
+                topic_scores[topic] = max(topic_scores[topic], normalized)
+
+            if normalized > best_score:
+                best_score = normalized
+                best_topic = topic
+
+        return best_topic, topic_scores
+
+    def _load_labeled_emails(self) -> List[Dict[str, Any]]:
+        with open(self._EMAILS_FILE, 'r') as f:
+            emails = json.load(f)
+        return [e for e in emails if e.get("ground_truth") is not None]
