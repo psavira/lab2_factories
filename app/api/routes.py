@@ -2,7 +2,7 @@ import os
 import json
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from app.services.email_topic_inference import EmailTopicInferenceService
 from app.dataclasses import Email
 
@@ -33,7 +33,7 @@ class EmailAddResponse(BaseModel):
 class StoreEmailRequest(BaseModel):
     subject: str
     body: str
-    ground_truth: str | None = None
+    ground_truth: Optional[str] = None
 
 class TopicRequest(BaseModel):
     name: str
