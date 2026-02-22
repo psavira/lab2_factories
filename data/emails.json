@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": 1,
+    "subject": "Start Project",
+    "body": "We should start the planning soon before the actual development.",
+    "ground_truth": null
+  },
+  {
+    "id": 2,
+    "subject": "Team standup tomorrow",
+    "body": "Please join the meeting at 9am.",
+    "ground_truth": "work"
+  }
+]

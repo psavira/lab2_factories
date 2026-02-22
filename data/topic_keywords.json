@@ -13,5 +13,11 @@
   },
   "support": {
     "description": "Customer support, help requests, and technical issues"
+  },
+  "development": {
+    "description": "building, engineering, coding, planning"
+  },
+  "random": {
+    "description": "random, arbitrary, other"
   }
 }
