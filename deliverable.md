@@ -20,6 +20,8 @@ This enpoint stores a new email in `data/emails.json`. The endpoint accepts `sub
 
 ![POST emails ground_truth.png](POST_emails_ground_truth.png)
 
+![POST emails new topic](POST_emails_classify_new_topic.png)
+
 # Modified Endpoints
 - `POST /emails/classify`
 
