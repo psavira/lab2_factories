@@ -29,6 +29,8 @@ This enpoint stores a new email in `data/emails.json`. The endpoint accepts `sub
 
 This endpoint now allows user to select one of two available strategies to classify an email. The default strategy is `topic`, which compares the input email against stored topic descriptions. The other strategy is `nearest`, which finds the most similar labeled stored email and uses its topic.
 
+`NearestEmailClassifierModel` class classifies an email by comparing it to previously stored and labeled emails if the user selects `nearest` as its `mode` or strategy. The topic of the most similar labeled email will get selected as the prediction. 
+
 `POST /emails/classify`
 
 ![POST emails classify.png](POST_emails_classify.png)
